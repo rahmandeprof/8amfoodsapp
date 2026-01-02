@@ -4,26 +4,18 @@ const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined;
 };
 
-// Create PrismaClient with explicit datasource URL for Vercel deployment
-// Prisma 7 requires passing the URL explicitly when not using the default env var loading
-function createPrismaClient() {
-    const databaseUrl = process.env.DATABASE_URL;
-
-    if (!databaseUrl) {
-        console.warn('DATABASE_URL is not set');
+// Use getter pattern for truly lazy initialization
+// This prevents PrismaClient from being instantiated at build time
+function getPrismaClient(): PrismaClient {
+    if (!globalForPrisma.prisma) {
+        globalForPrisma.prisma = new PrismaClient();
     }
-
-    return new PrismaClient({
-        datasources: {
-            db: {
-                url: databaseUrl,
-            },
-        },
-    });
+    return globalForPrisma.prisma;
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== 'production') {
-    globalForPrisma.prisma = prisma;
-}
+// Export as a getter to ensure lazy initialization
+export const prisma = new Proxy({} as PrismaClient, {
+    get(_, prop) {
+        return (getPrismaClient() as Record<string, unknown>)[prop as string];
+    },
+});
