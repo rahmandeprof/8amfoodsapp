@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/* Custom color theme for 8am */
+@theme {
+  --color-primary: #ff6b35;
+  --color-primary-dark: #e55a2b;
+  --color-surface: #1a1a2e;
+  --color-surface-2: #16213e;
+  --color-card: #0f3460;
+  --color-card-hover: #1f4068;
+}
+
+/* Base styles */
+body {
+  @apply bg-surface text-white antialiased;
+  min-height: 100dvh;
+}
+
+/* Custom utilities */
+@utility touch-target {
+  min-height: 48px;
+  min-width: 48px;
+}

@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  PENDING      // Pay-on-pickup, awaiting arrival
+  PAID         // Payment confirmed, prep should start
+  PREPARING    // Kitchen is making the order
+  READY        // Ready for pickup
+  PICKED_UP    // Customer collected order
+  CANCELLED    // Order cancelled
+  EXPIRED      // Pay-on-pickup timeout
+}
+
+enum PaymentMethod {
+  ONLINE
+  IN_PERSON
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model Item {
+  id              String      @id @default(cuid())
+  name            String
+  priceKobo       Int         // Price in kobo (₦1 = 100 kobo)
+  prepTimeSec     Int         // Base preparation time in seconds
+  dailyQuantity   Int         // Total available per day
+  availableToday  Int         // Current remaining quantity
+  isAvailable     Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  orderItems      OrderItem[]
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  shortCode     String        @unique // Human-readable code like "8AM-047"
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod
+  phone         String?       // Optional phone for notifications
+  totalKobo     Int
+  estReadyAt    DateTime?     // Set when payment confirmed
+  expiresAt     DateTime?     // For pay-on-pickup orders
+  createdAt     DateTime      @default(now())
+  paidAt        DateTime?
+  readyAt       DateTime?
+  pickedUpAt    DateTime?
+  orderItems    OrderItem[]
+  payments      Payment[]
+}
+
+model OrderItem {
+  id            String  @id @default(cuid())
+  orderId       String
+  itemId        String
+  quantity      Int
+  unitPriceKobo Int     // Snapshot of price at order time
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item          Item    @relation(fields: [itemId], references: [id])
+
+  @@index([orderId])
+  @@index([itemId])
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  orderId     String
+  method      String        // card, transfer, ussd, cash
+  status      PaymentStatus @default(PENDING)
+  providerRef String?       // Paystack/Flutterwave reference
+  amountKobo  Int
+  createdAt   DateTime      @default(now())
+  confirmedAt DateTime?
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
